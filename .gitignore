@@ -1,0 +1,14 @@
+*.gcda
+*.gcno
+*.o
+*.html
+*.tar.gz
+*.adv
+.*~
+bin/*
+obj/*
+*.bin
+*.obj
+*.out
+*.swp
+.vscode
