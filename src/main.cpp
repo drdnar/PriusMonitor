@@ -38,8 +38,8 @@ int main()
 			WheelRearLeft::Value(), WheelRearRight::Value(),
 			WheelFrontLeft::Units());
 		printw("Battery V&A: %3.0f %s  %5.1f %s  %8.1f W\n",
-			BatteryCurrent::Value(), BatteryCurrent::Units(),
 			BatteryPotentional::Value(), BatteryPotentional::Units(),
+			BatteryCurrent::Value(), BatteryCurrent::Units(),
 			BatteryCurrent::Value() * BatteryPotentional::Value());
 		printw("Battery health: SoC %5.1f %s   dSoC %5.1f %s  min %2.0f %s  max %2.0f %s\n",
 			BatterySoC::Value(), BatterySoC::Units(), 
