@@ -6,6 +6,7 @@ SRCDIR ?= src
 OBJDIR ?= obj
 BINDIR ?= bin
 
+LIBS := -lpthread -lncurses
 
 # define some common makefile things
 empty :=
@@ -51,7 +52,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(USERHEADERS)
 	$(Q)$(CXX) $(CXXFLAGS) $(call QUOTE_ARG,$(addprefix $(CURDIR)/,$<)) -o $(call QUOTE_ARG,$(addprefix $(CURDIR)/,$@))
 
 $(BINDIR)/$(PROGRAM_NAME): $(CPP_OBJECTS)
-	$(Q)$(CXX) $(CPP_OBJECTS) -lncurses -o $(BINDIR)/$(PROGRAM_NAME)
+	$(Q)$(CXX) $(CPP_OBJECTS) $(LIBS) -o $(BINDIR)/$(PROGRAM_NAME)
 
 clean:
 	$(Q)rm -r bin obj

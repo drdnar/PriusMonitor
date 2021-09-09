@@ -1,7 +1,7 @@
 #ifndef PROCESS_FRAME_H
 #define PROCESS_FRAME_H
 
-#include "CAN.hpp"
+#include "CANBus.hpp"
 
 namespace Vehicle
 {
