@@ -7,7 +7,7 @@ OBJDIR ?= obj
 BINDIR ?= bin
 
 STATIC_LIBS_DIRS += -Llibs/
-LIBS := -lpthread -lncurses -llvgl
+LIBS := -lpthread -lncurses -llvgl -llvglfonts
 
 # define some common makefile things
 empty :=
@@ -53,7 +53,10 @@ CPP_OBJECTS := $(CPPSOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 C_OBJECTS := $(CSOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 
 
-all: $(BINDIR)/$(PROGRAM_NAME)
+all: staticlibs $(BINDIR)/$(PROGRAM_NAME)
+
+staticlibs:
+	$(MAKE) -C libs
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(USERHEADERS)
 	$(Q)mkdir -p obj/UI/forms obj/Vehicle bin obj/UI/lvgl
@@ -65,9 +68,6 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(USERHEADERS)
 
 $(BINDIR)/$(PROGRAM_NAME): $(CPP_OBJECTS) $(C_OBJECTS) staticlibs
 	$(Q)$(CXX) $(CPP_OBJECTS) $(C_OBJECTS) $(STATIC_LIBS_DIRS) $(LIBS) -o $(BINDIR)/$(PROGRAM_NAME)
-
-staticlibs:
-	$(MAKE) -C libs
 
 clean:
 	$(Q)rm -r bin obj

@@ -62,7 +62,7 @@
 #endif     /*LV_MEM_CUSTOM*/
 
 /*Use the standard `memcpy` and `memset` instead of LVGL's own functions. (Might or might not be faster).*/
-#define LV_MEMCPY_MEMSET_STD    0
+#define LV_MEMCPY_MEMSET_STD    1
 
 /*====================
    HAL SETTINGS
@@ -284,7 +284,7 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #define LV_FONT_MONTSERRAT_8     0
 #define LV_FONT_MONTSERRAT_10    0
 #define LV_FONT_MONTSERRAT_12    0
-#define LV_FONT_MONTSERRAT_14    1
+#define LV_FONT_MONTSERRAT_14    0
 #define LV_FONT_MONTSERRAT_16    0
 #define LV_FONT_MONTSERRAT_18    0
 #define LV_FONT_MONTSERRAT_20    0
@@ -326,7 +326,7 @@ LV_FONT_DECLARE(B612Bold22) LV_FONT_DECLARE(B612Bold16) \
 LV_FONT_DECLARE(B612BoldItalic22) LV_FONT_DECLARE(B612BoldItalic16)
 
 /*Always set a default font*/
-#define LV_FONT_DEFAULT &lv_font_montserrat_14
+#define LV_FONT_DEFAULT &B612MonoRegular22
 
 /*Enable handling large font and/or fonts with a lot of characters.
  *The limit depends on the font size, font face and bpp.
@@ -397,7 +397,7 @@ LV_FONT_DECLARE(B612BoldItalic22) LV_FONT_DECLARE(B612BoldItalic16)
 
 #define LV_USE_ARC          1
 
-#define LV_USE_ANIMIMG	    1
+#define LV_USE_ANIMIMG	    0
 
 #define LV_USE_BAR          1
 
@@ -444,7 +444,7 @@ LV_FONT_DECLARE(B612BoldItalic22) LV_FONT_DECLARE(B612BoldItalic16)
 /*-----------
  * Widgets
  *----------*/
-#define LV_USE_CALENDAR     1
+#define LV_USE_CALENDAR     0
 #if LV_USE_CALENDAR
 # define LV_CALENDAR_WEEK_STARTS_MONDAY 0
 # if LV_CALENDAR_WEEK_STARTS_MONDAY
@@ -456,11 +456,15 @@ LV_FONT_DECLARE(B612BoldItalic22) LV_FONT_DECLARE(B612BoldItalic16)
 # define LV_CALENDAR_DEFAULT_MONTH_NAMES {"January", "February", "March",  "April", "May",  "June", "July", "August", "September", "October", "November", "December"}
 # define LV_USE_CALENDAR_HEADER_ARROW       1
 # define LV_USE_CALENDAR_HEADER_DROPDOWN    1
+#else
+# define LV_CALENDAR_WEEK_STARTS_MONDAY 0
+# define LV_USE_CALENDAR_HEADER_ARROW       0
+# define LV_USE_CALENDAR_HEADER_DROPDOWN    0
 #endif  /*LV_USE_CALENDAR*/
 
 #define LV_USE_CHART        1
 
-#define LV_USE_COLORWHEEL   1
+#define LV_USE_COLORWHEEL   0
 
 #define LV_USE_IMGBTN       1
 
@@ -499,17 +503,17 @@ LV_FONT_DECLARE(B612BoldItalic22) LV_FONT_DECLARE(B612BoldItalic16)
 #if LV_USE_THEME_DEFAULT
 
 /*0: Light mode; 1: Dark mode*/
-# define LV_THEME_DEFAULT_DARK     0
+# define LV_THEME_DEFAULT_DARK     1
 
 /*1: Enable grow on press*/
-# define LV_THEME_DEFAULT_GROW              1
+# define LV_THEME_DEFAULT_GROW              0
 
 /*Default transition time in [ms]*/
 # define LV_THEME_DEFAULT_TRANSITON_TIME    80
 #endif /*LV_USE_THEME_DEFAULT*/
 
 /*A very simple theme that is a good starting point for a custom theme*/
- #define LV_USE_THEME_BASIC    1
+#define LV_USE_THEME_BASIC    1
 
 /*A theme designed for monochrome displays*/
 #define LV_USE_THEME_MONO       1
