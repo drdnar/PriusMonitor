@@ -1,7 +1,30 @@
-#include "keyboard.h"
+#include "keyboard.hpp"
+#include "global.hpp"
 #include <ncurses.h>
 
-void keyboard_read(lv_indev_drv_t* indev_drv, lv_indev_data_t* data)
+using namespace LVGL;
+
+ncursesKeyboard ncursesKeyboard::instance { };
+
+ncursesKeyboard::ncursesKeyboard()
+{
+    Global::EnsureInitialized();
+    initscr(); cbreak(); noecho(); curs_set(0); keypad(stdscr, true); nodelay(stdscr, true);
+    lv_indev_drv_init(&indev_drv);
+    indev_drv.type = LV_INDEV_TYPE_KEYPAD;
+    indev_drv.read_cb = &read;
+    indev_drv.user_data = this;
+    device_instance = lv_indev_drv_register(&indev_drv);
+}
+
+
+ncursesKeyboard::~ncursesKeyboard()
+{
+    endwin();
+}
+
+
+void ncursesKeyboard::read([[maybe_unused]]lv_indev_drv_t* indev_drv, lv_indev_data_t* data)
 {
     switch(getch())
     {
