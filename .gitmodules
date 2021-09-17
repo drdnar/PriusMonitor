@@ -1,0 +1,3 @@
+[submodule "pi/libs/lvgl"]
+	path = pi/libs/lvgl
+	url = https://github.com/lvgl/lvgl.git

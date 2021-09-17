@@ -6,7 +6,8 @@ SRCDIR ?= src
 OBJDIR ?= obj
 BINDIR ?= bin
 
-LIBS := -lpthread -lncurses
+STATIC_LIBS_DIRS += -Llibs/
+LIBS := -lpthread -lncurses -llvgl
 
 # define some common makefile things
 empty :=
@@ -24,8 +25,13 @@ else
 OPTIMIZATION = -O3 -g0
 endif
 LINKER = llvm-ld
+CC := clang
 CXX := clang++
 CXXFLAGS := -c -Wall -Wextra $(OPTIMIZATION)
+
+# LVGL
+LVGL_DIR ?= ${shell pwd}/libs
+LVGL_DIR_NAME ?= lvgl
 
 # Some OS-specific stuff
 NATIVEPATH = $(subst \,/,$1)
@@ -39,22 +45,34 @@ rwildcard = $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2)$(filter $(subst
 
 # find source files
 CPPSOURCES := $(call rwildcard,$(SRCDIR),*.cpp)
+CSOURCES := $(call rwildcard,$(SRCDIR),*.c)
 USERHEADERS := $(call rwildcard,$(SRCDIR),*.h *.hpp)
 
 # create links for later
 CPP_OBJECTS := $(CPPSOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
+C_OBJECTS := $(CSOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 
 
 all: $(BINDIR)/$(PROGRAM_NAME)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(USERHEADERS)
-	$(Q)mkdir -p obj/UI/forms obj/Vehicle bin
+	$(Q)mkdir -p obj/UI/forms obj/Vehicle bin obj/UI/lvgl
 	$(Q)$(CXX) $(CXXFLAGS) $(call QUOTE_ARG,$(addprefix $(CURDIR)/,$<)) -o $(call QUOTE_ARG,$(addprefix $(CURDIR)/,$@))
 
-$(BINDIR)/$(PROGRAM_NAME): $(CPP_OBJECTS)
-	$(Q)$(CXX) $(CPP_OBJECTS) $(LIBS) -o $(BINDIR)/$(PROGRAM_NAME)
+$(OBJDIR)/%.o: $(SRCDIR)/%.c $(USERHEADERS)
+	$(Q)mkdir -p obj/UI/forms obj/Vehicle bin obj/UI/lvgl
+	$(Q)$(CC) $(CXXFLAGS) $(call QUOTE_ARG,$(addprefix $(CURDIR)/,$<)) -o $(call QUOTE_ARG,$(addprefix $(CURDIR)/,$@))
+
+$(BINDIR)/$(PROGRAM_NAME): $(CPP_OBJECTS) $(C_OBJECTS) staticlibs
+	$(Q)$(CXX) $(CPP_OBJECTS) $(C_OBJECTS) $(STATIC_LIBS_DIRS) $(LIBS) -o $(BINDIR)/$(PROGRAM_NAME)
+
+staticlibs:
+	$(MAKE) -C libs
 
 clean:
 	$(Q)rm -r bin obj
 
-.PHONY: clean all
+veryclean: clean
+	$(MAKE) clean -C libs
+
+.PHONY: clean all staticlibs veryclean

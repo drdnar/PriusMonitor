@@ -1,6 +1,8 @@
 *.gcda
 *.gcno
 *.o
+*.a
+*.lib
 *.html
 *.tar.gz
 *.adv
