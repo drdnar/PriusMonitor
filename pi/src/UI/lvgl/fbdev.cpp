@@ -1,5 +1,5 @@
 #include "fbdev.hpp"
-#include "global.hpp"
+#include "core/lvgl.hpp"
 
 #include <stdint.h>
 #include <fcntl.h>
@@ -114,8 +114,10 @@ void Framebuffer::flush(const lv_area_t * area, lv_color_t * color_p)
 
     lv_coord_t w = (act_x2 - act_x1 + 1);
     long int location = 0;
+#ifdef FRAMEBUFFER_SUPPORT_1_BPP
     long int byte_location = 0;
     unsigned char bit_location = 0;
+#endif
 
     switch (vinfo.bits_per_pixel)
     {

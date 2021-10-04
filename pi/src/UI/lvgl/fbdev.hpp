@@ -14,6 +14,8 @@ class Framebuffer
 {
     public:
         static Framebuffer& GetInstance() { return instance; }
+        int GetWidth() const noexcept { return vinfo.width; }
+        int GetHeight() const noexcept { return vinfo.height; }
     private:
         Framebuffer();
         ~Framebuffer();

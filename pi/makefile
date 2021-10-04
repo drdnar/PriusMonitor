@@ -63,7 +63,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(USERHEADERS)
 	$(Q)$(CXX) $(CXXFLAGS) $(call QUOTE_ARG,$(addprefix $(CURDIR)/,$<)) -o $(call QUOTE_ARG,$(addprefix $(CURDIR)/,$@))
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(USERHEADERS)
-	$(Q)mkdir -p obj/UI/forms obj/Vehicle bin obj/UI/lvgl
+	$(Q)mkdir -p obj/UI/lvgl/core obj/Vehicle bin
 	$(Q)$(CC) $(CXXFLAGS) $(call QUOTE_ARG,$(addprefix $(CURDIR)/,$<)) -o $(call QUOTE_ARG,$(addprefix $(CURDIR)/,$@))
 
 $(BINDIR)/$(PROGRAM_NAME): $(CPP_OBJECTS) $(C_OBJECTS) staticlibs

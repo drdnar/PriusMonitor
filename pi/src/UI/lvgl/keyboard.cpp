@@ -1,5 +1,5 @@
 #include "keyboard.hpp"
-#include "global.hpp"
+#include "core/lvgl.hpp"
 #include <ncurses.h>
 
 using namespace LVGL;
