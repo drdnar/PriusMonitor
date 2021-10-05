@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <functional>
 #include <iterator>
+#include <vector>
+#include <variant>
 
 namespace LVGL
 {
@@ -36,9 +38,6 @@ namespace LVGL
  */
 class Object
 {
-    /* NOTA BENE: 
-     *   The little bit of implementation code not found here is in lvgl.cpp. */
-
     public:
         ////////////////////////////////////////////////////////////////////////
         ////// CONSTRUCTION & DESTRUCTION //////////////////////////////////////
@@ -304,6 +303,28 @@ class Object
         ////////////////////////////////////////////////////////////////////////
 
         /**
+         * Add an event handler function for an object.
+         * Used by the user to react on event which happens with the object.
+         * An object can have multiple event handler. They will be called in the same order as they were added.
+         * @param filter    and event code (e.g. `LV_EVENT_CLICKED`) on which the event should be called. `LV_EVENT_ALL` can be sued the receive all the events.
+         * @param event_cb  the new event function
+         * @param           user_data custom data data will be available in `event_cb`
+         * @return          a pointer the event descriptor. Can be used in RemoveRawEventHandler
+         */
+        struct _lv_event_dsc_t* AddRawEventHandler(lv_event_cb_t event_cb, lv_event_code_t filter, void* user_data) noexcept
+        {
+            return lv_obj_add_event_cb(lv_obj, event_cb, filter, user_data);
+        }
+
+        /**
+         * DEPRACTED because doesn't work if multiple event handlers are added to an object.
+         * Remove an event handler function for an object.
+         * @param event_dsc pointer to an event descriptor to remove (returned by AddRawEventHandler)
+         * @return          true if any event handlers were removed
+         */
+        bool RemoveRawEventHandler(struct _lv_event_dsc_t* handler) noexcept { return lv_obj_remove_event_dsc(lv_obj, handler); }
+
+        /**
          * A functor that is unbound to a specific Object.
          * @param target A reference to the object getting the event
          * @param original_target The original object that got the event
@@ -314,28 +335,6 @@ class Object
          * @param param Some kind of arbitrary data associated with the specific event.
          */
         typedef std::function<void(Object& target, Object* original_target, lv_event_code_t event_id, void* param)> UnboundEventHandler;
-        
-        /**
-         * Registers an event handler.
-         * @param func Some kind of callable thing to be invoked
-         * @param event_id an event code (e.g. `LV_EVENT_CLICKED`) on which the event should be called. `LV_EVENT_ALL` can be used the receive all the events.
-         * @see std::mem_fn
-         * @warning I'm not sure what happens if you try to register more than one event handler using the exact same functor.
-         */
-        struct _lv_event_dsc_t* AddEventHandler(UnboundEventHandler& func, lv_event_code_t event_id) noexcept
-        {
-            return lv_obj_add_event_cb(lv_obj, &generic_event_handler, event_id, &func);
-        }
-        
-        /**
-         * Registers an event handler.
-         * @param func Some kind of callable thing to be invoked
-         * @param event_id an event code (e.g. `LV_EVENT_CLICKED`) on which the event should be called. `LV_EVENT_ALL` can be used the receive all the events.
-         * @see std::mem_fn
-         * @warning I'm not sure what happens if you try to register more than one event handler using the exact same functor.
-         */
-        Object& OnEvent(UnboundEventHandler& func, lv_event_code_t event_id) noexcept { AddEventHandler(func, event_id); return *this; }
-
         /**
          * A functor that is unbound to a specific Object and in which the event ID is implied.
          * @param target A reference to the object getting the event
@@ -346,28 +345,19 @@ class Object
          * @param param Some kind of arbitrary data associated with the specific event.
          */
         typedef std::function<void(Object& target, Object* original_target, void* param)> UnboundImpliedEventHandler;
-        
         /**
-         * Registers an event handler.
-         * @param func Some kind of callable thing to be invoked
-         * @param event_id an event code (e.g. `LV_EVENT_CLICKED`) on which the event should be called. `LV_EVENT_ALL` can be used the receive all the events.
-         * @see std::mem_fn
-         * @warning I'm not sure what happens if you try to register more than one event handler using the exact same functor.
+         * A functor that is unbound to a specific Object.
+         * @param target A reference to the object getting the event
+         * @param event_id The event ID code of the event happening.
+         * @param param Some kind of arbitrary data associated with the specific event.
          */
-        struct _lv_event_dsc_t* AddEventHandler(UnboundImpliedEventHandler& func, lv_event_code_t event_id) noexcept
-        {
-            return lv_obj_add_event_cb(lv_obj, &generic_implied_event_handler, event_id, &func);
-        }
-        
+        typedef std::function<void(Object& target, lv_event_code_t event_id, void* param)> UnboundOrphanEventHandler;
         /**
-         * Registers an event handler.
-         * @param func Some kind of callable thing to be invoked
-         * @param event_id an event code (e.g. `LV_EVENT_CLICKED`) on which the event should be called. `LV_EVENT_ALL` can be used the receive all the events.
-         * @see std::mem_fn
-         * @warning I'm not sure what happens if you try to register more than one event handler using the exact same functor.
+         * A functor that is unbound to a specific Object and in which the event ID is implied.
+         * @param target A reference to the object getting the event
+         * @param param Some kind of arbitrary data associated with the specific event.
          */
-        Object& OnEvent(UnboundImpliedEventHandler& func, lv_event_code_t event_id) noexcept { AddEventHandler(func, event_id); return *this; }
-
+        typedef std::function<void(Object& target, void* param)> UnboundOrphanImpliedEventHandler;
         /**
          * A functor that is bound to a specific Object (i.e. the functor has
          * additional state such that the target Object parameter is already
@@ -380,26 +370,6 @@ class Object
          * @param param Some kind of arbitrary data associated with the specific event.
          */
         typedef std::function<void(Object* original_target, lv_event_code_t event_id, void* param)> BoundEventHandler;
-
-        /**
-         * Registers an event handler.
-         * @param func Some kind of callable thing to be invoked
-         * @param event_id an event code (e.g. `LV_EVENT_CLICKED`) on which the event should be called. `LV_EVENT_ALL` can be used the receive all the events.
-         * @warning I'm not sure what happens if you try to register more than one event handler using the exact same functor.
-         */
-        struct _lv_event_dsc_t* AddEventHandler(BoundEventHandler& func, lv_event_code_t event_id) noexcept
-        {
-            return lv_obj_add_event_cb(lv_obj, &less_generic_event_handler, event_id, &func);
-        }
-
-        /**
-         * Registers an event handler.
-         * @param func Some kind of callable thing to be invoked
-         * @param event_id an event code (e.g. `LV_EVENT_CLICKED`) on which the event should be called. `LV_EVENT_ALL` can be used the receive all the events.
-         * @warning I'm not sure what happens if you try to register more than one event handler using the exact same functor.
-         */
-        Object& OnEvent(BoundEventHandler& func, lv_event_code_t event_id) noexcept { AddEventHandler(func, event_id); return *this; }
-        
         /**
          * A functor that is bound to a specific Object (i.e. the functor has
          * additional state such that the target Object parameter is already
@@ -411,77 +381,164 @@ class Object
          * @param param Some kind of arbitrary data associated with the specific event.
          */
         typedef std::function<void(Object* original_target, void* param)> BoundImpliedEventHandler;
+        /**
+         * A functor that is bound to a specific Object (i.e. the functor has
+         * additional state such that the target Object parameter is already
+         * implied)
+         * @param event_id The event ID code of the event happening.
+         * @param param Some kind of arbitrary data associated with the specific event.
+         */
+        typedef std::function<void(lv_event_code_t event_id, void* param)> BoundOrphanEventHandler;
+        /**
+         * A functor that is bound to a specific Object (i.e. the functor has
+         * additional state such that the target Object parameter is already
+         * implied) and in which the event ID is implied.
+         * @param param Some kind of arbitrary data associated with the specific event.
+         */
+        typedef std::function<void(void* param)> BoundOrphanImpliedEventHandler;
+
+        /**
+         * A functor that is unbound to a specific Object.
+         * @param target A reference to the object getting the event
+         * @param original_target The original object that got the event
+         *        (namely, a child object that bubbled an event up to its parent)
+         *        This would be nullptr only if somebody was unkind enough to
+         *        introduce an unwrapped object.                 
+         * @param event_id The event ID code of the event happening.
+         */
+        typedef std::function<void(Object& target, Object* original_target, lv_event_code_t event_id)> ParamlessUnboundEventHandler;
+        /**
+         * A functor that is unbound to a specific Object and in which the event ID is implied.
+         * @param target A reference to the object getting the event
+         * @param original_target The original object that got the event
+         *        (namely, a child object that bubbled an event up to its parent)
+         *        This would be nullptr only if somebody was unkind enough to
+         *        introduce an unwrapped object.                 
+         */
+        typedef std::function<void(Object& target, Object* original_target)> ParamlessUnboundImpliedEventHandler;
+        /**
+         * A functor that is unbound to a specific Object.
+         * @param target A reference to the object getting the event
+         * @param event_id The event ID code of the event happening.
+         */
+        typedef std::function<void(Object& target, lv_event_code_t event_id)> ParamlessUnboundOrphanEventHandler;
+        /**
+         * A functor that is unbound to a specific Object and in which the event ID is implied.
+         * @param target A reference to the object getting the event
+         */
+        typedef std::function<void(Object& target)> ParamlessUnboundOrphanImpliedEventHandler;
+        /**
+         * A functor that is bound to a specific Object (i.e. the functor has
+         * additional state such that the target Object parameter is already
+         * implied)
+         * @param original_target The original object that got the event
+         *        (namely, a child object that bubbled an event up to its parent)
+         *        This would be nullptr only if somebody was unkind enough to
+         *        introduce an unwrapped object.                 
+         * @param event_id The event ID code of the event happening.
+         */
+        typedef std::function<void(Object* original_target, lv_event_code_t event_id)> ParamlessBoundEventHandler;
+        /**
+         * A functor that is bound to a specific Object (i.e. the functor has
+         * additional state such that the target Object parameter is already
+         * implied) and in which the event ID is implied.
+         * @param original_target The original object that got the event
+         *        (namely, a child object that bubbled an event up to its parent)
+         *        This would be nullptr only if somebody was unkind enough to
+         *        introduce an unwrapped object.                 
+         */
+        typedef std::function<void(Object* original_target)> ParamlessBoundImpliedEventHandler;
+        /**
+         * A functor that is bound to a specific Object (i.e. the functor has
+         * additional state such that the target Object parameter is already
+         * implied)
+         * @param event_id The event ID code of the event happening.
+         */
+        typedef std::function<void(lv_event_code_t event_id)> ParamlessBoundOrphanEventHandler;
+        /**
+         * A functor that is bound to a specific Object (i.e. the functor has
+         * additional state such that the target Object parameter is already
+         * implied) and in which the event ID is implied.
+         */
+        typedef std::function<void()> ParamlessBoundOrphanImpliedEventHandler;
+
+        /**
+         * A thing returned by AddEventHandler that lets you later remove that exact handler.
+         */
+        typedef uintptr_t EventHandlerID;
+        
+        // Apparently, we can't specialize templates in a class definition?
+#define LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(FUNCTOR, CALLBACK) EventHandlerID AddEventHandler(FUNCTOR func, lv_event_code_t event_id) noexcept;
 
         /**
          * Registers an event handler.
          * @param func Some kind of callable thing to be invoked
          * @param event_id an event code (e.g. `LV_EVENT_CLICKED`) on which the event should be called. `LV_EVENT_ALL` can be used the receive all the events.
-         * @warning I'm not sure what happens if you try to register more than one event handler using the exact same functor.
+         * @return Returns a thing which can be passed to Disable/EnableEventHandler
          */
-        struct _lv_event_dsc_t* AddEventHandler(BoundImpliedEventHandler& func, lv_event_code_t event_id) noexcept
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(UnboundEventHandler, generic_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(UnboundImpliedEventHandler, generic_implied_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(UnboundOrphanEventHandler, generic_orphan_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(UnboundOrphanImpliedEventHandler, generic_orphan_implied_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(BoundEventHandler, less_generic_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(BoundImpliedEventHandler, less_generic_implied_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(BoundOrphanEventHandler, less_generic_orphan_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(BoundOrphanImpliedEventHandler, less_generic_orphan_implied_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(ParamlessUnboundEventHandler, generic_paramless_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(ParamlessUnboundImpliedEventHandler, generic_paramless_implied_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(ParamlessUnboundOrphanEventHandler, generic_paramless_orphan_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(ParamlessUnboundOrphanImpliedEventHandler, generic_paramless_orphan_implied_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(ParamlessBoundEventHandler, less_generic_paramless_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(ParamlessBoundImpliedEventHandler, less_generic_paramless_implied_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(ParamlessBoundOrphanEventHandler, less_generic_paramless_orphan_event_handler)
+        LVGL_OBJECT_DECLARE_ADD_EVENT_HANDLER(ParamlessBoundOrphanImpliedEventHandler, less_generic_paramless_orphan_implied_event_handler)
+
+        /**
+         * Disables an event handler function for an Object.
+         * WARNING: The event handler is disabled, but not deleted.  If you need
+         * to remove and re-add the same handler repeatedly, use
+         * EnableEventHandler instead of adding the same handler again and again,
+         * which will leak memory.
+         * @param id  An event handler ID to be removed (from AddEventHandler)
+         */
+        Object& DisableEventHandler(EventHandlerID id) noexcept
         {
-            return lv_obj_add_event_cb(lv_obj, &less_generic_implied_event_handler, event_id, &func);
+            auto& x = functors_list[id];
+            if (!x.live)
+                return *this;
+            x.live = false;
+            lv_obj_remove_event_cb_with_user_data(lv_obj, &generic_event_handler, reinterpret_cast<void*>(id));
+            return *this;
+        }
+        
+        /**
+         * Re-enables an event handler.
+         */
+        Object& EnableEventHandler(EventHandlerID id) noexcept
+        {
+            auto& x = functors_list[id];
+            if (x.live)
+                return *this;
+            lv_obj_add_event_cb(lv_obj, x.callback, x.code, reinterpret_cast<void*>(id));
+            return *this;
         }
 
         /**
          * Registers an event handler.
-         * @param func Some kind of callable thing to be invoked
+         * If you want to be able subsequently disable the handler, use AddEventHandler.
+         * @note Read this as "on this event code, do this"
+         * (as opposed to AddEventHandler as "add this handler for this event code")
          * @param event_id an event code (e.g. `LV_EVENT_CLICKED`) on which the event should be called. `LV_EVENT_ALL` can be used the receive all the events.
-         * @warning I'm not sure what happens if you try to register more than one event handler using the exact same functor.
+         * @param func Some kind of callable thing to be invoked
          */
-        Object& OnEvent(BoundImpliedEventHandler& func, lv_event_code_t event_id) noexcept { AddEventHandler(func, event_id); return *this; }
+        template<typename T> Object& OnEvent(lv_event_code_t event_id, T& func) noexcept { AddEventHandler(func, event_id); return *this; }
 
-        /**
-         * Remove an event handler function for an object.
-         * @param event_cb  the event function to remove
-         * @return          true if any event handlers were removed
-         */
-        bool RemoveEventHandler(UnboundEventHandler& func) noexcept { return lv_obj_remove_event_cb_with_user_data(lv_obj, &generic_event_handler, &func); }
 
-        /**
-         * Remove an event handler function for an object.
-         * @param event_cb  the event function to remove
-         */
-        Object& OffEvent(UnboundEventHandler& func) noexcept { RemoveEventHandler(func); return *this; }
+        ////////////////////////////////////////////////////////////////////////
+        ////// SPECIFIC EVENTS /////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////
 
-        /**
-         * Remove an event handler function for an object.
-         * @param event_cb  the event function to remove
-         * @return          true if any event handlers were removed
-         */
-        bool RemoveEventHandler(UnboundImpliedEventHandler& func) noexcept { return lv_obj_remove_event_cb_with_user_data(lv_obj, &generic_implied_event_handler, &func); }
-
-        /**
-         * Remove an event handler function for an object.
-         * @param event_cb  the event function to remove
-         */
-        Object& OffEvent(UnboundImpliedEventHandler& func) noexcept { RemoveEventHandler(func); return *this; }
-
-        /**
-         * Remove an event handler function for an object.
-         * @param event_cb  the event function to remove
-         * @return          true if any event handlers were removed
-         */
-        bool RemoveEventHandler(BoundEventHandler& func) noexcept { return lv_obj_remove_event_cb_with_user_data(lv_obj, &less_generic_event_handler, &func); }
-
-        /**
-         * Remove an event handler function for an object.
-         * @param event_cb  the event function to remove
-         */
-        Object& OffEvent(BoundEventHandler& func) noexcept { RemoveEventHandler(func); return *this; }
-
-        /**
-         * Remove an event handler function for an object.
-         * @param event_cb  the event function to remove
-         * @return          true if any event handlers were removed
-         */
-        bool RemoveEventHandler(BoundImpliedEventHandler& func) noexcept { return lv_obj_remove_event_cb_with_user_data(lv_obj, &less_generic_implied_event_handler, &func); }
-
-        /**
-         * Remove an event handler function for an object.
-         * @param event_cb  the event function to remove
-         */
-        Object& OffEvent(BoundImpliedEventHandler& func) noexcept { RemoveEventHandler(func); return *this; }
+        //template<typename T> Object& OnDelete(T& func) noexcept { OnEvent(func, LV_EVENT_DELETE); return *this; }
 
     protected:
         /**
@@ -534,6 +591,32 @@ class Object
         static void on_delete_handler(lv_event_t* event);
         
         /**
+         * ALL the possible event handler types!
+         */
+        typedef std::variant<UnboundEventHandler, UnboundImpliedEventHandler, UnboundOrphanEventHandler, UnboundOrphanImpliedEventHandler, BoundEventHandler, BoundImpliedEventHandler, BoundOrphanEventHandler, BoundOrphanImpliedEventHandler, ParamlessUnboundEventHandler, ParamlessUnboundImpliedEventHandler, ParamlessUnboundOrphanEventHandler, ParamlessUnboundOrphanImpliedEventHandler, ParamlessBoundEventHandler, ParamlessBoundImpliedEventHandler, ParamlessBoundOrphanEventHandler, ParamlessBoundOrphanImpliedEventHandler> EventHandler;
+
+        /**
+         * Contains all the information needed to re-add an event handler.
+         */
+        struct event_handler_item
+        {
+            lv_event_cb_t callback;
+            lv_event_code_t code;
+            EventHandler handler;
+            bool live;
+        };
+
+        /**
+         * A list of all functors attached.
+         * 
+         * So what's happening here is that this is keeping a list of all
+         * functors attached to this Object.  For functors are objects, so they
+         * consume memory and need to live somewhere, and this is where they
+         * live.
+         */
+        std::vector<event_handler_item> functors_list { };
+
+        /**
          * Translate TreeWalk std::function<> to C.
          */
         static lv_obj_tree_walk_res_t tree_walk_handler(lv_obj_t* target, void* data);
@@ -550,6 +633,17 @@ class Object
 
         /**
          * Generic event handler; translates LVGL events back to C++.
+         * @note It's an "orphan" because it has no parent (original target) parameter.
+         */
+        static void generic_orphan_event_handler(lv_event_t* event);
+
+        /**
+         * Generic event handler; translates LVGL events back to C++.
+         */
+        static void generic_orphan_implied_event_handler(lv_event_t* event);
+        
+        /**
+         * Generic event handler; translates LVGL events back to C++.
          */
         static void less_generic_event_handler(lv_event_t* event);
 
@@ -557,6 +651,57 @@ class Object
          * Generic event handler; translates LVGL events back to C++.
          */
         static void less_generic_implied_event_handler(lv_event_t* event);
+        
+        /**
+         * Generic event handler; translates LVGL events back to C++.
+         */
+        static void less_generic_orphan_event_handler(lv_event_t* event);
+
+        /**
+         * Generic event handler; translates LVGL events back to C++.
+         */
+        static void less_generic_orphan_implied_event_handler(lv_event_t* event);
+
+        /**
+         * Generic event handler; translates LVGL events back to C++.
+         */
+        static void generic_paramless_event_handler(lv_event_t* event);
+        
+        /**
+         * Generic event handler; translates LVGL events back to C++.
+         */
+        static void generic_paramless_implied_event_handler(lv_event_t* event);
+
+        /**
+         * Generic event handler; translates LVGL events back to C++.
+         * @note It's an "orphan" because it has no parent (original target) parameter.
+         */
+        static void generic_paramless_orphan_event_handler(lv_event_t* event);
+
+        /**
+         * Generic event handler; translates LVGL events back to C++.
+         */
+        static void generic_paramless_orphan_implied_event_handler(lv_event_t* event);
+        
+        /**
+         * Generic event handler; translates LVGL events back to C++.
+         */
+        static void less_generic_paramless_event_handler(lv_event_t* event);
+
+        /**
+         * Generic event handler; translates LVGL events back to C++.
+         */
+        static void less_generic_paramless_implied_event_handler(lv_event_t* event);
+        
+        /**
+         * Generic event handler; translates LVGL events back to C++.
+         */
+        static void less_generic_paramless_orphan_event_handler(lv_event_t* event);
+
+        /**
+         * Generic event handler; translates LVGL events back to C++.
+         */
+        static void less_generic_paramless_orphan_implied_event_handler(lv_event_t* event);
 };
 
 
