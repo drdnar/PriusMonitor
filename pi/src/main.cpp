@@ -14,6 +14,9 @@
 
 #include "UI/lvgl/fbdev.hpp"
 #include "UI/lvgl/keyboard.hpp"
+#include "UI/lvgl/core/object.hpp"
+
+#include "UI/ParameterDisplay.hpp"
 
 using namespace std;
 using namespace Vehicle;
@@ -27,12 +30,10 @@ using namespace Vehicle;
 
 int main()
 {
-	lv_init();
-
     lv_obj_t* label = lv_label_create(lv_scr_act());
-    lv_label_set_text(label, "Terrible test hack.");
+    lv_label_set_text(label, "Terrible test hack 2.");
     //lv_obj_add_style(label, &style1, 0);
-
+	lv_label_set_text_fmt(label, "Test %p", lv_scr_act());
 	lv_timer_handler();
 	
 
@@ -58,7 +59,9 @@ int main()
 		printw("Brake pedal position: %3.0f %s\n", BrakePedal::Value(), BrakePedal::Units());
 		printw("Engine coolant: %5.1f %s\n",
 			EngineCoolantTemp::Value(), EngineCoolantTemp::Units());
+		
 		refresh();
+		lv_timer_handler();
 		nanosleep(&update_period, nullptr);
 	}
 	return 0;

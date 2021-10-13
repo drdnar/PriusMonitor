@@ -14,7 +14,7 @@ class Label : public Object
         /**
          * Basic constructor
          */
-        Label(lv_obj_t& parent, bool automatic_duration = false) : Object(automatic_duration) { lv_obj = lv_label_create(&parent); }
+        Label(lv_obj_t& parent, bool automatic_duration = false) : Object(lv_label_create(&parent), automatic_duration) { }
         
         /**
          * Set a new text for a label. Memory will be allocated to store the text by the label.

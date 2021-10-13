@@ -18,8 +18,6 @@ Global& Global::GetInstance()
 Global::Global()
 {
     lv_init();
-    // TODO: This should really be handled by the display system.
-    new Screen(lv_scr_act());
 }
 
 

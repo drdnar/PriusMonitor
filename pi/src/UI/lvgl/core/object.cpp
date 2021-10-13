@@ -55,13 +55,14 @@ lv_obj_tree_walk_res_t Object::tree_walk_handler(lv_obj_t* target, void* data)
 }
 
 
-#define LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(FUNCTOR, CALLBACK) Object::EventHandlerID Object::AddEventHandler(FUNCTOR func, lv_event_code_t event_id) noexcept\
+#define LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(FUNCTOR_TYPE, CALLBACK) Object::EventHandlerID Object::AddEventHandler(FUNCTOR_TYPE func, lv_event_code_t event_id) noexcept\
 {\
     EventHandlerID id = functors_list.size();\
     functors_list.push_back({CALLBACK, event_id, func, true});\
     lv_obj_add_event_cb(lv_obj, &CALLBACK, event_id, reinterpret_cast<void*>(id));\
     return id;\
 }
+
 
 LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(UnboundEventHandler, generic_event_handler)
 LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(UnboundImpliedEventHandler, generic_implied_event_handler)
@@ -79,6 +80,14 @@ LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(ParamlessBoundEventHandler, less_generic
 LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(ParamlessBoundImpliedEventHandler, less_generic_paramless_implied_event_handler)
 LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(ParamlessBoundOrphanEventHandler, less_generic_paramless_orphan_event_handler)
 LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(ParamlessBoundOrphanImpliedEventHandler, less_generic_paramless_orphan_implied_event_handler)
+LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(MemberEventHandler, member_event_handler)
+LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(MemberImpliedEventHandler, member_implied_event_handler)
+LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(MemberOrphanEventHandler, member_orphan_event_handler)
+LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(MemberOrphanImpliedEventHandler, member_orphan_implied_event_handler)
+LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(ParamlessMemberEventHandler, member_paramless_event_handler)
+LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(ParamlessImpliedMemberEventHandler, member_paramless_implied_event_handler)
+LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(ParamlessOrphanMemberEventHandler, member_paramless_orphan_event_handler)
+LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(ParamlessOrphanImpliedMemberEventHandler, member_paramless_orphan_implied_event_handler)
 
 
 void Object::generic_event_handler(lv_event_t* event)
@@ -86,7 +95,10 @@ void Object::generic_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<UnboundEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
+    std::get<UnboundEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
     (
         *target, GetWrapper(lv_event_get_target(event)),
         lv_event_get_code(event), lv_event_get_param(event)
@@ -99,7 +111,10 @@ void Object::generic_implied_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<UnboundImpliedEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
+    std::get<UnboundImpliedEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
     (
         *target, GetWrapper(lv_event_get_target(event)), 
         lv_event_get_param(event)
@@ -112,8 +127,11 @@ void Object::generic_orphan_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<UnboundOrphanEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
-        (*target, lv_event_get_code(event), lv_event_get_param(event));
+    std::get<UnboundOrphanEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
+    (*target, lv_event_get_code(event), lv_event_get_param(event));
 }
 
 
@@ -122,8 +140,11 @@ void Object::generic_orphan_implied_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<UnboundOrphanImpliedEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
-        (*target, lv_event_get_param(event));
+    std::get<UnboundOrphanImpliedEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
+    (*target, lv_event_get_param(event));
 }
 
 
@@ -132,7 +153,10 @@ void Object::less_generic_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<BoundEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
+    std::get<BoundEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
     (
         GetWrapper(lv_event_get_target(event)),
         lv_event_get_code(event), lv_event_get_param(event)
@@ -145,8 +169,11 @@ void Object::less_generic_implied_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<BoundImpliedEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
-        (GetWrapper(lv_event_get_target(event)), lv_event_get_param(event));
+    std::get<BoundImpliedEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
+    (GetWrapper(lv_event_get_target(event)), lv_event_get_param(event));
 }
 
 
@@ -155,8 +182,11 @@ void Object::less_generic_orphan_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<BoundOrphanEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
-        (lv_event_get_code(event), lv_event_get_param(event));
+    std::get<BoundOrphanEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
+    (lv_event_get_code(event), lv_event_get_param(event));
 }
 
 
@@ -165,8 +195,11 @@ void Object::less_generic_orphan_implied_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<BoundOrphanImpliedEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
-        (lv_event_get_param(event));
+    std::get<BoundOrphanImpliedEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
+    (lv_event_get_param(event));
 }
 
 
@@ -175,7 +208,10 @@ void Object::generic_paramless_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<ParamlessUnboundEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
+    std::get<ParamlessUnboundEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
     (
         *target, GetWrapper(lv_event_get_target(event)),
         lv_event_get_code(event)
@@ -188,8 +224,11 @@ void Object::generic_paramless_implied_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<ParamlessUnboundImpliedEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
-        (*target, GetWrapper(lv_event_get_target(event)));
+    std::get<ParamlessUnboundImpliedEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
+    (*target, GetWrapper(lv_event_get_target(event)));
 }
 
 
@@ -198,8 +237,11 @@ void Object::generic_paramless_orphan_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<ParamlessUnboundOrphanEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
-        (*target, lv_event_get_code(event));
+    std::get<ParamlessUnboundOrphanEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
+    (*target, lv_event_get_code(event));
 }
 
 
@@ -208,8 +250,11 @@ void Object::generic_paramless_orphan_implied_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<ParamlessUnboundOrphanImpliedEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
-        (*target);
+    std::get<ParamlessUnboundOrphanImpliedEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
+    (*target);
 }
 
 
@@ -218,7 +263,10 @@ void Object::less_generic_paramless_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<ParamlessBoundEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
+    std::get<ParamlessBoundEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
     (
         GetWrapper(lv_event_get_target(event)),
         lv_event_get_code(event)
@@ -231,8 +279,11 @@ void Object::less_generic_paramless_implied_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<ParamlessBoundImpliedEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
-        (GetWrapper(lv_event_get_target(event)));
+    std::get<ParamlessBoundImpliedEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
+    (GetWrapper(lv_event_get_target(event)));
 }
 
 
@@ -241,8 +292,11 @@ void Object::less_generic_paramless_orphan_event_handler(lv_event_t* event)
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<ParamlessBoundOrphanEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
-        (lv_event_get_code(event));
+    std::get<ParamlessBoundOrphanEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
+    (lv_event_get_code(event));
 }
 
 
@@ -251,6 +305,137 @@ void Object::less_generic_paramless_orphan_implied_event_handler(lv_event_t* eve
     Object* target = GetWrapper(lv_event_get_current_target(event));
     if (!target)
         return;
-    std::get<ParamlessBoundOrphanImpliedEventHandler>(target->functors_list[reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))].handler)
-        ();
+    std::get<ParamlessBoundOrphanImpliedEventHandler>(
+        target->functors_list[
+            reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+        ].handler)
+    ();
+}
+
+
+void Object::member_event_handler(lv_event_t* event)
+{
+    Object* target = GetWrapper(lv_event_get_current_target(event));
+    if (!target)
+        return;
+    std::invoke(
+        std::get<MemberEventHandler>(
+            target->functors_list[
+                reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+            ].handler),
+        *target,
+        GetWrapper(lv_event_get_target(event)), lv_event_get_code(event), lv_event_get_param(event)
+    );
+}
+
+
+void Object::member_implied_event_handler(lv_event_t* event)
+{
+    Object* target = GetWrapper(lv_event_get_current_target(event));
+    if (!target)
+        return;
+    std::invoke(
+        std::get<MemberImpliedEventHandler>(
+            target->functors_list[
+                reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+            ].handler),
+        *target,
+        GetWrapper(lv_event_get_target(event)), lv_event_get_param(event)
+    );
+}
+
+
+void Object::member_orphan_event_handler(lv_event_t* event)
+{
+    Object* target = GetWrapper(lv_event_get_current_target(event));
+    if (!target)
+        return;
+    std::invoke(
+        std::get<MemberOrphanEventHandler>(
+            target->functors_list[
+                reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+            ].handler),
+        *target,
+        lv_event_get_code(event), lv_event_get_param(event)
+    );
+}
+
+
+void Object::member_orphan_implied_event_handler(lv_event_t* event)
+{
+    Object* target = GetWrapper(lv_event_get_current_target(event));
+    if (!target)
+        return;
+    std::invoke(
+        std::get<MemberOrphanImpliedEventHandler>(
+            target->functors_list[
+                reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+            ].handler),
+        *target,
+        lv_event_get_param(event)
+    );
+}
+
+
+void Object::member_paramless_event_handler(lv_event_t* event)
+{
+    Object* target = GetWrapper(lv_event_get_current_target(event));
+    if (!target)
+        return;
+    std::invoke(
+        std::get<ParamlessMemberEventHandler>(
+            target->functors_list[
+                reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+            ].handler),
+        *target,
+        GetWrapper(lv_event_get_target(event)), lv_event_get_code(event)
+    );
+}
+
+
+void Object::member_paramless_implied_event_handler(lv_event_t* event)
+{
+    Object* target = GetWrapper(lv_event_get_current_target(event));
+    if (!target)
+        return;
+    std::invoke(
+        std::get<ParamlessImpliedMemberEventHandler>(
+            target->functors_list[
+                reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+            ].handler),
+        *target,
+        GetWrapper(lv_event_get_target(event))
+    );
+}
+
+
+void Object::member_paramless_orphan_event_handler(lv_event_t* event)
+{
+    Object* target = GetWrapper(lv_event_get_current_target(event));
+    if (!target)
+        return;
+    std::invoke(
+        std::get<ParamlessOrphanMemberEventHandler>(
+            target->functors_list[
+                reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+            ].handler),
+        *target,
+        lv_event_get_code(event)
+    );
+}
+
+
+void Object::member_paramless_orphan_implied_event_handler(lv_event_t* event)
+{
+    Object* target = GetWrapper(lv_event_get_current_target(event));
+    if (!target)
+        return;
+    std::invoke(
+        std::get<ParamlessOrphanImpliedMemberEventHandler>(
+            target->functors_list[
+                reinterpret_cast<uintptr_t>(lv_event_get_user_data(event))
+            ].handler),
+        *target
+        // No parameters
+    );
 }

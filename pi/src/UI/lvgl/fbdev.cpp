@@ -1,5 +1,6 @@
 #include "fbdev.hpp"
 #include "core/lvgl.hpp"
+#include "core/object.hpp"
 
 #include <stdint.h>
 #include <fcntl.h>
@@ -84,7 +85,7 @@ Framebuffer::Framebuffer()
     driver.hor_res = vinfo.xres;
     driver.ver_res = vinfo.yres;
     driver.flush_cb = &thunk;
-    lv_disp_drv_register(&driver);
+    new Screen(lv_disp_get_scr_act(lv_disp_drv_register(&driver)));
 }
 
 
