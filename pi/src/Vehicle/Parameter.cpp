@@ -4,6 +4,8 @@
 
 using namespace Vehicle;
 
+const char Parameter::format_strings[2][16] = { "%*.*f", "% *.*f" };
+
 // From http://graphics.stanford.edu/~seander/bithacks.html#FixedSignExtend
 template <typename T, unsigned B>
 inline T sign_extend(const T x)
@@ -14,7 +16,7 @@ inline T sign_extend(const T x)
 
 #define INSTANCE(NAME) NAME NAME::Instance { }
 
-#define UPDATE(NAME) void NAME::Update(signed int new_value)
+#define UPDATE(NAME) void NAME::update(signed int new_value)
 
 INSTANCE(BrakePedal);
 
@@ -23,7 +25,7 @@ INSTANCE(AcceleratorPosition);
 INSTANCE(BatteryCurrent);
 UPDATE(BatteryCurrent)
 {
-    raw_value = sign_extend<signed int, 12>(new_value);
+    Parameter::Update(sign_extend<signed int, 12>(new_value));
 }
 
 INSTANCE(BatteryPotentional);

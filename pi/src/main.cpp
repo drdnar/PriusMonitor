@@ -42,7 +42,7 @@ int main()
 	struct timespec update_period = { .tv_sec = 0, .tv_nsec = 20 ms };
 	while (1)
 	{
-		mvprintw(0, 0, "Speed: %7.2f %s\n", Speed::Value(), Speed::Units());
+		mvprintw(0, 0, "Speed: %s %s\n", Speed::String(), Speed::Units());
 		printw("Wheels FL FR RL RR: %7.2f %7.2f %7.2f %7.2f %s\n",
 			WheelFrontLeft::Value(), WheelFrontRight::Value(),
 			WheelRearLeft::Value(), WheelRearRight::Value(),
