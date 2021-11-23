@@ -43,17 +43,18 @@ class Object
         ////// CONSTRUCTION & DESTRUCTION //////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////
 
-        Object(lv_obj_t& parent, bool automatic_duration = false)
-        {
-            lv_obj = lv_obj_create(&parent);
-            if (!automatic_duration)
-            {
-                lv_obj_add_event_cb(lv_obj, &on_delete_handler, LV_EVENT_DELETE, this);
-                delayed_delete = DeletionMode::HeapAllocated;
-            }
-            else
-                delayed_delete = DeletionMode::AutomaticDuration;
-        }
+        /**
+         * Create an LVGL Object.
+         * @param parent Standard parent parameter.
+         */
+        Object(Object& parent);
+
+        /**
+         * Create an LVGL Object.
+         * @param parent Standard parent parameter.  If nullptr, create a screen.
+         */
+        Object();
+
 
         /**
          * Attempts to get a C++ Object pointer given an lv_obj_t*.
@@ -295,7 +296,14 @@ class Object
          *                      If no C++ object is attached, then the callback
          *                      is skipped and LV_OBJ_TREE_WALK_NEXT is assumed.
          */
-        Object& TreeWalk(std::function<lv_obj_tree_walk_res_t(Object&)>& func) noexcept { lv_obj_tree_walk(lv_obj, &tree_walk_handler, &func); return *this; }
+        Object& TreeWalk(std::function<lv_obj_tree_walk_res_t(Object&)> const& func) noexcept 
+        {
+            lv_obj_tree_walk(lv_obj, &tree_walk_handler, 
+                // evil
+                &const_cast<std::function<lv_obj_tree_walk_res_t(Object&)>&>(func)
+            );
+            return *this;
+        }
     
         
         ////////////////////////////////////////////////////////////////////////
@@ -603,6 +611,7 @@ class Object
             return *this;
         }
 
+    protected:
         /**
          * Registers an event handler.
          * If you want to be able subsequently disable the handler, use AddEventHandler.
@@ -694,7 +703,8 @@ class Object
          */
         template<typename T> Object& OnEvent(lv_event_code_t event_id, void (T::*func)()) noexcept
         { AddEventHandler(static_cast<ParamlessOrphanImpliedMemberEventHandler>(func), event_id); return *this; }
-
+    public:
+    
 
         ////////////////////////////////////////////////////////////////////////
         ////// SPECIFIC EVENTS /////////////////////////////////////////////////
@@ -709,10 +719,10 @@ class Object
          * routine.
          * @warning Remember to initialize lv_obj!
          */
-        Object(lv_obj_t* obj, bool automatic_duration) : lv_obj(obj)
+        Object(lv_obj_t* obj) : lv_obj(obj)
         {
-            if (!automatic_duration)
-                lv_obj_add_event_cb(lv_obj, &on_delete_handler, LV_EVENT_DELETE, this);
+            lv_obj_add_event_cb(lv_obj, &on_delete_handler, LV_EVENT_DELETE, this);
+            lv_obj_set_user_data(lv_obj, this);
         }
         
         /**
@@ -729,7 +739,7 @@ class Object
 
         enum class DeletionMode : uint_fast8_t
         {
-            AutomaticDuration,
+            ManualDuration,
             HeapAllocated,
             HeapDeleting,
             HeapDeleted
@@ -922,15 +932,32 @@ class Screen : public Object
         /**
          * Nothing special.
          */
-        Screen(bool automatic_duration = false) : Object(lv_obj_create(nullptr), automatic_duration) { }
+        Screen() : Object(lv_obj_create(nullptr)) { }
     
+        /**
+         * Fetches the currently active Screen.
+         */
+        static Screen& Active()
+#ifdef LVGL_GET_WRAPPER_NOT_PARANOID
+        {
+            return *((Screen*)GetWrapper(lv_scr_act()));
+        }
+#else
+        ;
+#endif /* LVGL_GET_WRAPPER_NOT_PARANOID */
+
+        /**
+         * Refresh everything on the current screen.
+         */
+        static void Refresh();
+
         friend class Global;
     
 //    private:
         /**
          * For use by Global to initialize the default screen.
          */
-        Screen(lv_obj_t* actual) : Object(actual, false) { }
+        Screen(lv_obj_t* actual) : Object(actual) { }
 };
 
 } /* namespace LVGL */

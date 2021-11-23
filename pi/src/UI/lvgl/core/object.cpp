@@ -2,6 +2,24 @@
 
 using namespace LVGL;
 
+Object::Object(Object& parent)
+{
+    lv_obj = lv_obj_create(parent.lv_obj);
+    lv_obj_add_event_cb(lv_obj, &on_delete_handler, LV_EVENT_DELETE, this);
+    delayed_delete = DeletionMode::HeapAllocated;
+    lv_obj_set_user_data(lv_obj, this);
+}
+
+
+Object::Object()
+{
+    lv_obj = lv_obj_create(lv_scr_act());
+    lv_obj_add_event_cb(lv_obj, &on_delete_handler, LV_EVENT_DELETE, this);
+    delayed_delete = DeletionMode::HeapAllocated;
+    lv_obj_set_user_data(lv_obj, this);
+}
+
+
 #ifndef LVGL_GET_WRAPPER_NOT_PARANOID
 Object* Object::GetWrapper(lv_obj_t* obj)
 {
@@ -18,19 +36,23 @@ Object* Object::GetWrapper(lv_obj_t* obj)
 
 Object::~Object()
 {
-    if (delayed_delete == DeletionMode::HeapDeleting)
+    switch (delayed_delete)
+    {
+        case DeletionMode::HeapDeleting:
+        case DeletionMode::HeapDeleted: // ? ? ?
 #ifndef LVGL_IGNORE_DELAYED_DOUBLE_DELETE_ERROR
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wexceptions"
-        throw std::logic_error("Destructing an LVGL::Object too soon! (Should you have used new instead of making it a local object?)");
+            throw std::logic_error("Destructing an LVGL::Object too soon! (Should you have used new instead of making it a local object?)");
 #pragma GCC diagnostic pop
 #else
-        lv_obj_set_user_data(lv_obj, nullptr);
+            lv_obj_set_user_data(lv_obj, nullptr);
 #endif /* LVGL_IGNORE_DELAYED_DOUBLE_DELETE */
-    if (delayed_delete != DeletionMode::AutomaticDuration)
-    {
-        delayed_delete = DeletionMode::HeapDeleted;
-        lv_obj_del(lv_obj);
+            break;
+        case DeletionMode::HeapAllocated:
+            delayed_delete = DeletionMode::HeapDeleted;
+            lv_obj_del(lv_obj);
+            break;
     }
 }
 
@@ -50,7 +72,7 @@ lv_obj_tree_walk_res_t Object::tree_walk_handler(lv_obj_t* target, void* data)
 {
     Object* obj = GetWrapper(target);
     if (obj)
-        return ((std::function<lv_obj_tree_walk_res_t(Object&)>&)data)(*obj);
+        return ((std::function<lv_obj_tree_walk_res_t(Object&)> const&)*data)(*obj);
     return LV_OBJ_TREE_WALK_NEXT;
 }
 
@@ -437,5 +459,29 @@ void Object::member_paramless_orphan_implied_event_handler(lv_event_t* event)
             ].handler),
         *target
         // No parameters
+    );
+}
+
+
+#ifndef LVGL_GET_WRAPPER_NOT_PARANOID
+Screen& Screen::Active()
+{
+    lv_obj_t* object = lv_scr_act();
+    Object* screen = GetWrapper(object);
+    if (screen != nullptr)
+        return *((Screen*)screen);
+    return *(new Screen(object));
+}
+#endif
+
+
+void Screen::Refresh()
+{
+    Screen::Active().TreeWalk(
+        [](Object& target)
+        {
+            lv_event_send(target, LV_EVENT_REFRESH, nullptr);
+            return LV_OBJ_TREE_WALK_NEXT;
+        }
     );
 }

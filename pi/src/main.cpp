@@ -16,7 +16,7 @@
 #include "UI/lvgl/keyboard.hpp"
 #include "UI/lvgl/core/object.hpp"
 
-#include "UI/ParameterDisplay.hpp"
+#include "UI/ParameterLabel.hpp"
 
 using namespace std;
 using namespace Vehicle;
@@ -34,8 +34,12 @@ int main()
     lv_label_set_text(label, "Terrible test hack 2.");
     //lv_obj_add_style(label, &style1, 0);
 	lv_label_set_text_fmt(label, "Test %p", lv_scr_act());
+	int lx = 50;
+	lv_obj_set_pos(label, 50, 100);
 	lv_timer_handler();
 	
+	auto speed = new UI::ParameterLabel(Speed::Instance);
+	lv_obj_set_pos(*speed, 20, 300);
 
 	CANTrafficProcessor processor { *(new CANBus()) };
 	processor.Begin();
@@ -60,7 +64,18 @@ int main()
 		printw("Engine coolant: %5.1f %s\n",
 			EngineCoolantTemp::Value(), EngineCoolantTemp::Units());
 		
+		printw("bah %i\n", lx);
 		refresh();
+		lx += 10;
+		if (lx > 500)
+			lx = 50;
+		/*lv_obj_set_pos(label, lx, 100);
+		if (lx > 400)
+			lv_obj_invalidate(lv_scr_act());*/
+			//lv_obj_invalidate(lv_scr_act());
+		LVGL::Screen::Refresh();
+		//lv_event_send(*speed, LV_EVENT_REFRESH, nullptr);
+		lv_tick_inc(20);
 		lv_timer_handler();
 		nanosleep(&update_period, nullptr);
 	}
