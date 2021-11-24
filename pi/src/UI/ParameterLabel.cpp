@@ -5,23 +5,24 @@ using namespace Vehicle;
 using namespace LVGL;
 
 
-
-
-ParameterLabel::ParameterLabel(Vehicle::Parameter& parameter, Object& parent) : Label(parent), Parameter { parameter }
+ParameterLabel::ParameterLabel(Vehicle::Parameter& parameter, Object& parent, bool show_units, bool imperial)
+    : Label(parent), Parameter { parameter }, show_units{show_units}, imperial{imperial}
 {
     OnEvent(LV_EVENT_REFRESH, &ParameterLabel::RefreshHandler);
-    SetTextStatic("init");
 }
 
 
-ParameterLabel::ParameterLabel(Vehicle::Parameter& parameter) : ParameterLabel(parameter, Screen::Active())
-{
-    // nothing else to do
-}
 
-
-void ParameterLabel::RefreshHandler()
+void ParameterLabel::RefreshHandler() noexcept
 {
-    //SetText("%f %s", Parameter.GetValue(), Parameter.GetUnits());
-    SetTextStatic(Parameter.GetString());
+    if (show_units)
+    {
+        if (!imperial)
+            sprintf(cached_string, "%s %s", Parameter.GetString(), Parameter.GetUnits());
+        else
+            sprintf(cached_string, "%s %s", Parameter.GetStringImperial(), Parameter.GetUnitsImperial());
+        SetTextStatic(cached_string);
+    }
+    else
+        SetTextStatic(Parameter.GetString());
 }

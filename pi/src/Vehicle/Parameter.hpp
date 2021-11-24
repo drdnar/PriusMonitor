@@ -17,10 +17,17 @@ namespace Vehicle
 class Parameter
 {
     public:
+        const char* GetLongName() const noexcept { return long_name; }
+        const char* GetShortName() const noexcept { return short_name; }
+        const char* GetAbbreviation() const noexcept { return abbreviation; }
         /**
          * Returns the SI units of this parameter.
          */
         const char* GetUnits() const noexcept { return units; }
+        /**
+         * Returns the SI units of this parameter.
+         */
+        const char* GetUnitsImperial() const noexcept { return imperial_units; }
         /**
          * Returns the current raw integer value of this parameter.
          */
@@ -33,8 +40,17 @@ class Parameter
          * Returns the value of this parameter, adjusted to match GetUnits().
          */
         virtual float GetValue() const noexcept { return metric_value; };
+        /**
+         * Preferred number of digits to show before decimal point.
+         */
         uint_fast8_t GetIntegerDigits() const noexcept { return integer_digits; }
+        /**
+         * Preferred number of digits to show after decimal point.
+         */
         uint_fast8_t GetFractionalDigits() const noexcept { return fractional_digits; }
+        /**
+         * Can this parameter have negative values?
+         */
         bool Signed() const noexcept { return is_signed; }
         /**
          * Updates this parameter.
@@ -44,11 +60,15 @@ class Parameter
         /**
          * Maximum length of a string value.
          */
-        static const std::size_t MaxStringLength = 15;
+        static const std::size_t MaxStringLength = 31;
         /**
          * Returns a human-readable string representation.
          */
         const char* GetString() noexcept { if (dirty_string) update_string_do(); return cached_string; }
+        /**
+         * Returns a human-readable string representation.
+         */
+        const char* GetStringImperial() noexcept { if (cached_string_imperial) update_string_imperial_do(); return cached_string_imperial; }
     protected:
         /**
          * Used to convert a raw value to an SI value.
@@ -70,6 +90,9 @@ class Parameter
          * Used to convert kelvins to degrees Fahrenheit.  Should otherwise always be zero.
          */
         float imperial_offset = 0.0f;
+        const char* long_name = "long name";
+        const char* short_name = "short name";
+        const char* abbreviation = "abbreviation";
         /**
          * Name of standard SI units, e.g. km.
          */
@@ -98,10 +121,15 @@ class Parameter
          * Cached pointer to format string.
          */
         const char* format_string = format_strings[0];
-        Parameter(const char* units, const char* imperial_units,
+        /**
+         * Internal initializer
+         */
+        Parameter(const char* long_name, const char* short_name, const char* abbreviation,
+            const char* units, const char* imperial_units,
             float raw_scale, float raw_offset, float metric_offset, float imperial_scale, float imperial_offset, 
             bool is_signed, uint_fast8_t integer_digits, uint_fast8_t fractional_digits) :
-            raw_scale{raw_scale}, metric_offset{metric_offset}, imperial_scale{imperial_scale}, imperial_offset{imperial_offset},
+            raw_scale{raw_scale}, raw_offset{raw_offset}, metric_offset{metric_offset}, imperial_scale{imperial_scale}, imperial_offset{imperial_offset},
+            long_name{long_name}, short_name{short_name}, abbreviation{abbreviation},
             units{units}, imperial_units{imperial_units},
             is_signed{is_signed}, integer_digits{integer_digits}, fractional_digits{fractional_digits},
             total_number_width{(uint_fast8_t)(integer_digits + fractional_digits + is_signed + 1 - (fractional_digits == 0 ? 2 : 0))},
@@ -110,15 +138,26 @@ class Parameter
                 // that's all, folks
             }
         signed int raw_value = 0;
+        /**
+         * SI base units (namely, kelvins instead of degrees Celsius)
+         */
         float si_value = 0.0f;
+        /**
+         * Common metric units (namely, degrees Celsius instead of kelvins)
+         */
         float metric_value = 0.0f;
+        /**
+         * Imperial units (but not Rankines)
+         */
         float imperial_value = 0.0f;
-        char cached_string[MaxStringLength + 1] = 
-        {
-            '(', 'n', 'o', 'v', 'a', 'l', ')', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', 
-            //'\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0' 
-        };
+        /**
+         * True if the cached string value needs to be updated.
+         */
         bool string_is_dirty() const noexcept { return dirty_string; }
+        /**
+         * True if the cached string value needs to be updated.
+         */
+        bool imperial_string_is_dirty() const noexcept { return cached_string_imperial; }
         /**
          * Updates this parameter (for real).
          * @param new_value Raw, unadjusted value direct from CAN frame.
@@ -135,18 +174,52 @@ class Parameter
          */
         inline void update_string_do() noexcept { dirty_string = false; update_string(); }
         /**
+         * Makes sure the cached string is up-to-date.
+         */
+        inline void update_string_imperial_do() noexcept { dirty_string_imperial = false; update_string_imperial(); }
+        /**
          * Updates the cached string value.
          */
         virtual void update_string() noexcept
         {
-            sprintf(cached_string, format_string, total_number_width, fractional_digits, metric_value, units);
+            sprintf(cached_string, format_string, total_number_width, fractional_digits, metric_value);
+        }
+        /**
+         * Updates the cached string value.
+         */
+        virtual void update_string_imperial() noexcept
+        {
+            sprintf(cached_string_imperial, format_string, total_number_width, fractional_digits, imperial_value);
         }
     private:
         static const char format_strings[2][16];
         /**
          * Tracks whether cached_string needs to be updated.
          */
-        bool dirty_string;
+        bool dirty_string = true;
+        /**
+         * Tracks whether cached_string_imperial needs to be updated.
+         */
+        bool dirty_string_imperial = true;
+    protected:
+        // I'm placing these last as hint to try to align them to cache lines.
+        // TODO: Probably look up the Pi's actual cache line size and check if it makes any difference.
+        /**
+         * Instead of using the heap a ton for lots of string, just recycle the same memory.
+         */
+        char cached_string[MaxStringLength + 1] = 
+        {
+            '(', 'n', 'o', 'v', 'a', 'l', ')', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', 
+            '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0' 
+        };
+        /**
+         * Instead of using the heap a ton for lots of string, just recycle the same memory.
+         */
+        char cached_string_imperial[MaxStringLength + 1] = 
+        {
+            '(', 'n', 'o', 'v', 'a', 'l', ')', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', 
+            '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0' 
+        };
 };
 
 
@@ -162,8 +235,8 @@ class Parameter
 // 1 radian  =  57.29577951 degrees
 #define KPH_TO_MPH_FACTOR 0.621371f
 
-#define PARAMETERS(NAME, UNITS, IMPERIAL_UNITS, RAW_SCALE, RAW_OFFSET, METRIC_OFFSET, IMPERIAL_SCALE, IMPERIAL_OFFSET, IS_SIGNED, INTEGER_DIGITS, FRACTIONAL_DIGITS) private: \
-        NAME() : Parameter(UNITS, IMPERIAL_UNITS, RAW_SCALE, RAW_OFFSET, METRIC_OFFSET, IMPERIAL_SCALE, IMPERIAL_OFFSET, IS_SIGNED, INTEGER_DIGITS, FRACTIONAL_DIGITS) { } \
+#define PARAMETERS(NAME, LONG_NAME, SHORT_NAME, ABBREV, UNITS, IMPERIAL_UNITS, RAW_SCALE, RAW_OFFSET, METRIC_OFFSET, IMPERIAL_SCALE, IMPERIAL_OFFSET, IS_SIGNED, INTEGER_DIGITS, FRACTIONAL_DIGITS) private: \
+        NAME() : Parameter(LONG_NAME, SHORT_NAME, ABBREV, UNITS, IMPERIAL_UNITS, RAW_SCALE, RAW_OFFSET, METRIC_OFFSET, IMPERIAL_SCALE, IMPERIAL_OFFSET, IS_SIGNED, INTEGER_DIGITS, FRACTIONAL_DIGITS) { } \
         NAME(const NAME&) = delete; \
         NAME& operator=(const NAME&) = delete; \
     public: \
@@ -180,12 +253,12 @@ class Parameter
  */
 class BrakePedal : public Parameter
 {
-        PARAMETERS(BrakePedal, "%", "%", 100.0f / 127, 0.0f, 0.0f, 1.0f, 0.0f, false, 3, 0);
+        PARAMETERS(BrakePedal, "Brake pedal position", "Brake", "BRK", "%", "%", 100.0f / 127, 0.0f, 0.0f, 1.0f, 0.0f, false, 3, 0);
 };
 
 class AcceleratorPosition : public Parameter
 {
-        PARAMETERS(AcceleratorPosition, "?", "?", 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, false, 3, 0);
+        PARAMETERS(AcceleratorPosition, "Accelerator pedal position", "Gas", "Gas", "?", "?", 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, false, 3, 0);
 };
 
 /**
@@ -193,7 +266,7 @@ class AcceleratorPosition : public Parameter
  */
 class BatteryCurrent : public Parameter
 {
-        PARAMETERS(BatteryCurrent, "A", "A", 0.1f, 0.0f, 0.0f, 1.0f, 0.0f, false, 3, 1);
+        PARAMETERS(BatteryCurrent, "Traction battery current", "Batt. current", "B I", "A", "A", 0.1f, 0.0f, 0.0f, 1.0f, 0.0f, false, 3, 1);
         MANUAL_UPDATE();
 };
 
@@ -202,7 +275,7 @@ class BatteryCurrent : public Parameter
  */
 class BatteryPotentional : public Parameter
 {
-        PARAMETERS(BatteryPotentional, "V", "V", 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, false, 3, 0);
+        PARAMETERS(BatteryPotentional, "Traction battery potentional difference", "Batt. volts", "B V", "V", "V", 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, false, 3, 0);
 };
 
 
@@ -211,7 +284,7 @@ class BatteryPotentional : public Parameter
  */
 class BatterySoC : public Parameter
 {
-        PARAMETERS(BatterySoC, "%", "%", 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, false, 3, 1);
+        PARAMETERS(BatterySoC, "Battery state of charge", "Batt. SoC", "SoC", "%", "%", 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, false, 3, 1);
 };
 
 
@@ -222,7 +295,7 @@ class BatterySoC : public Parameter
  */
 class BatteryDeltaSoC : public Parameter
 {
-        PARAMETERS(BatteryDeltaSoC, "%", "%", 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, false, 3, 1);
+        PARAMETERS(BatteryDeltaSoC, "Battery state of charge delta", "Batt. dSoC", "dSoC", "%", "%", 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, false, 3, 1);
 };
 
 
@@ -231,8 +304,10 @@ class BatteryDeltaSoC : public Parameter
  */
 class BatteryTempLowest : public Parameter
 {
-//                 NAME,              UNITS, UNITS, RAW_SCALE, RAW_OFFSET, METRIC_OFFSET, IMPERIAL_SCALE, IMPERIAL_OFFSET, IS_SIGNED, INTEGER_DIGITS, FRACTIONAL_DIGITS
-        PARAMETERS(BatteryTempLowest, "C",   "F",   1.0f,      -273.15f,   273.15f,       5.0f / 9.0f,    459.67f,         true,      3,              0);
+//                 NAME,              
+        PARAMETERS(BatteryTempLowest, "Battery temperature lowest", "Batt. temp low", "B T low",
+//      UNITS, UNITS, RAW_SCALE, RAW_OFFSET, METRIC_OFFSET, IMPERIAL_SCALE, IMPERIAL_OFFSET, IS_SIGNED, INTEGER_DIGITS, FRACTIONAL_DIGITS
+        "C",   "F",   1.0f,      -273.15f,   273.15f,       5.0f / 9.0f,    459.67f,         true,      3,              0);
 };
 
 
@@ -241,8 +316,10 @@ class BatteryTempLowest : public Parameter
  */
 class BatteryTempHighest : public Parameter
 {
-//                 NAME,               UNITS, UNITS, RAW_SCALE, RAW_OFFSET, METRIC_OFFSET, IMPERIAL_SCALE, IMPERIAL_OFFSET, IS_SIGNED, INTEGER_DIGITS, FRACTIONAL_DIGITS
-        PARAMETERS(BatteryTempHighest, "C",   "F",   1.0f,      -273.15f,   273.15f,       5.0f / 9.0f,    459.67f,         true,      3,              0);
+//                 NAME,               
+        PARAMETERS(BatteryTempHighest, "Battery temperature highest", "Batt. temp high", "B T high",
+//      UNITS, UNITS, RAW_SCALE, RAW_OFFSET, METRIC_OFFSET, IMPERIAL_SCALE, IMPERIAL_OFFSET, IS_SIGNED, INTEGER_DIGITS, FRACTIONAL_DIGITS
+        "C",   "F",   1.0f,      -273.15f,   273.15f,       5.0f / 9.0f,    459.67f,         true,      3,              0);
 };
 
 
@@ -251,7 +328,7 @@ class BatteryTempHighest : public Parameter
  */
 class WheelFrontLeft : public Parameter
 {
-        PARAMETERS(WheelFrontLeft, "kph", "mph", 0.01f, 0.0f, 0.0f, KPH_TO_MPH_FACTOR, 0.0f, true, 3, 2);
+        PARAMETERS(WheelFrontLeft, "Front left wheel speed", "Wheel F L", "F L", "kph", "mph", 0.01f, 0.0f, 0.0f, KPH_TO_MPH_FACTOR, 0.0f, true, 3, 2);
 };
 
 /**
@@ -259,7 +336,7 @@ class WheelFrontLeft : public Parameter
  */
 class WheelFrontRight : public Parameter
 {
-        PARAMETERS(WheelFrontRight, "kph", "mph", 0.01f, 0.0f, 0.0f, KPH_TO_MPH_FACTOR, 0.0f, true, 3, 2);
+        PARAMETERS(WheelFrontRight, "Front right wheel speed", "Wheel F R", "F R", "kph", "mph", 0.01f, 0.0f, 0.0f, KPH_TO_MPH_FACTOR, 0.0f, true, 3, 2);
 };
 
 /**
@@ -267,7 +344,7 @@ class WheelFrontRight : public Parameter
  */
 class WheelRearLeft : public Parameter
 {
-        PARAMETERS(WheelRearLeft, "kph", "mph", 0.01f, 0.0f, 0.0f, KPH_TO_MPH_FACTOR, 0.0f, true, 3, 2);
+        PARAMETERS(WheelRearLeft, "Rear left wheel speed", "Wheel R L", "R L", "kph", "mph", 0.01f, 0.0f, 0.0f, KPH_TO_MPH_FACTOR, 0.0f, true, 3, 2);
 };
 
 /**
@@ -275,7 +352,7 @@ class WheelRearLeft : public Parameter
  */
 class WheelRearRight : public Parameter
 {
-        PARAMETERS(WheelRearRight, "kph", "mph", 0.01f, 0.0f, 0.0f, KPH_TO_MPH_FACTOR, 0.0f, true, 3, 2);
+        PARAMETERS(WheelRearRight, "Rear right wheel speed", "Wheel R R", "R R", "kph", "mph", 0.01f, 0.0f, 0.0f, KPH_TO_MPH_FACTOR, 0.0f, true, 3, 2);
 };
 
 
@@ -284,13 +361,16 @@ class WheelRearRight : public Parameter
  */
 class Speed : public Parameter
 {
-        PARAMETERS(Speed, "kph", "mph", 0.01f, 0.0f, 0.0f, KPH_TO_MPH_FACTOR, 0.0f, true, 3, 2);
+        PARAMETERS(Speed, "Vehicle speed", "Speed", "speed", "kph", "mph", 0.01f, 0.0f, 0.0f, KPH_TO_MPH_FACTOR, 0.0f, true, 3, 2);
 };
+
 
 class EngineCoolantTemp : public Parameter
 {
-//             NAME,              UNITS, UNITS, RAW_SCALE, RAW_OFFSET, METRIC_OFFSET, IMPERIAL_SCALE, IMPERIAL_OFFSET, IS_SIGNED, INTEGER_DIGITS, FRACTIONAL_DIGITS
-    PARAMETERS(EngineCoolantTemp, "C",   "F",   0.5f,      -273.15f,   273.15f,       5.0f / 9.0f,    459.67f,         true,      3,              0);
+//             NAME,              
+        PARAMETERS(EngineCoolantTemp, "Engine coolant temperature", "ICE coolant", "ICE temp",
+//      UNITS, UNITS, RAW_SCALE, RAW_OFFSET, METRIC_OFFSET, IMPERIAL_SCALE, IMPERIAL_OFFSET, IS_SIGNED, INTEGER_DIGITS, FRACTIONAL_DIGITS
+        "C",   "F",   0.5f,      -273.15f,   273.15f,       5.0f / 9.0f,    459.67f,         true,      3,              0);
 };
 
 

@@ -25,7 +25,7 @@ INSTANCE(AcceleratorPosition);
 INSTANCE(BatteryCurrent);
 UPDATE(BatteryCurrent)
 {
-    Parameter::Update(sign_extend<signed int, 12>(new_value));
+    Parameter::update(sign_extend<signed int, 12>(new_value));
 }
 
 INSTANCE(BatteryPotentional);

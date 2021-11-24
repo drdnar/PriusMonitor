@@ -39,6 +39,7 @@ int main()
 	lv_timer_handler();
 	
 	auto speed = new UI::ParameterLabel(Speed::Instance);
+	speed->SetImperial();
 	lv_obj_set_pos(*speed, 20, 300);
 
 	CANTrafficProcessor processor { *(new CANBus()) };
@@ -73,7 +74,8 @@ int main()
 		if (lx > 400)
 			lv_obj_invalidate(lv_scr_act());*/
 			//lv_obj_invalidate(lv_scr_act());
-		LVGL::Screen::Refresh();
+		LVGL::Screen::RefreshAll();
+		//LVGL::Screen::Active().Refresh();
 		//lv_event_send(*speed, LV_EVENT_REFRESH, nullptr);
 		lv_tick_inc(20);
 		lv_timer_handler();

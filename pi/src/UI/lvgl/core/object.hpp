@@ -304,6 +304,11 @@ class Object
             );
             return *this;
         }
+
+        /**
+         * Sends a refresh event to an object and all its children.
+         */
+        void Refresh() noexcept;
     
         
         ////////////////////////////////////////////////////////////////////////
@@ -949,7 +954,7 @@ class Screen : public Object
         /**
          * Refresh everything on the current screen.
          */
-        static void Refresh();
+        static void RefreshAll() { Screen::Active().Refresh(); }
 
         friend class Global;
     

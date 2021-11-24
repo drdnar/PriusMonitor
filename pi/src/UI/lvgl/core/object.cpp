@@ -77,6 +77,18 @@ lv_obj_tree_walk_res_t Object::tree_walk_handler(lv_obj_t* target, void* data)
 }
 
 
+void Object::Refresh() noexcept
+{
+    TreeWalk(
+        [](Object& target)
+        {
+            lv_event_send(target, LV_EVENT_REFRESH, nullptr);
+            return LV_OBJ_TREE_WALK_NEXT;
+        }
+    );
+}
+
+
 #define LVGL_OBJECT_IMPLEMENT_ADD_EVENT_HANDLER(FUNCTOR_TYPE, CALLBACK) Object::EventHandlerID Object::AddEventHandler(FUNCTOR_TYPE func, lv_event_code_t event_id) noexcept\
 {\
     EventHandlerID id = functors_list.size();\
@@ -473,15 +485,3 @@ Screen& Screen::Active()
     return *(new Screen(object));
 }
 #endif
-
-
-void Screen::Refresh()
-{
-    Screen::Active().TreeWalk(
-        [](Object& target)
-        {
-            lv_event_send(target, LV_EVENT_REFRESH, nullptr);
-            return LV_OBJ_TREE_WALK_NEXT;
-        }
-    );
-}
