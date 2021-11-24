@@ -68,7 +68,7 @@ class Parameter
         /**
          * Returns a human-readable string representation.
          */
-        const char* GetStringImperial() noexcept { if (cached_string_imperial) update_string_imperial_do(); return cached_string_imperial; }
+        const char* GetStringImperial() noexcept { if (dirty_string_imperial) update_string_imperial_do(); return cached_string_imperial; }
     protected:
         /**
          * Used to convert a raw value to an SI value.
@@ -157,7 +157,7 @@ class Parameter
         /**
          * True if the cached string value needs to be updated.
          */
-        bool imperial_string_is_dirty() const noexcept { return cached_string_imperial; }
+        bool imperial_string_is_dirty() const noexcept { return dirty_string_imperial; }
         /**
          * Updates this parameter (for real).
          * @param new_value Raw, unadjusted value direct from CAN frame.

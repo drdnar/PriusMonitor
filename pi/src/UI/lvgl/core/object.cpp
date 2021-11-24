@@ -53,6 +53,9 @@ Object::~Object()
             delayed_delete = DeletionMode::HeapDeleted;
             lv_obj_del(lv_obj);
             break;
+        case DeletionMode::ManualDuration:
+            // Do nothing
+            break;
     }
 }
 
@@ -72,7 +75,7 @@ lv_obj_tree_walk_res_t Object::tree_walk_handler(lv_obj_t* target, void* data)
 {
     Object* obj = GetWrapper(target);
     if (obj)
-        return ((std::function<lv_obj_tree_walk_res_t(Object&)> const&)*data)(*obj);
+        return (*static_cast<std::function<lv_obj_tree_walk_res_t(Object&)> const*>(data))(*obj);
     return LV_OBJ_TREE_WALK_NEXT;
 }
 
